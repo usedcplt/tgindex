@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - TGIndex{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <h1 class="text-3xl font-bold">Dashboard Overview</h1>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-gray-400 text-sm">Total Chats</h3>
+            <p class="text-3xl font-bold text-blue-400">{{ stats.total_chats }}</p>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-gray-400 text-sm">New Today</h3>
+            <p class="text-3xl font-bold text-green-400">{{ stats.new_today }}</p>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-gray-400 text-sm">New This Week</h3>
+            <p class="text-3xl font-bold text-yellow-400">{{ stats.new_this_week }}</p>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-gray-400 text-sm">New This Month</h3>
+            <p class="text-3xl font-bold text-purple-400">{{ stats.new_this_month }}</p>
+        </div>
+    </div>
+
+    <!-- More Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-gray-400 text-sm">Processed URLs</h3>
+            <p class="text-2xl font-bold text-white">{{ stats.processed_urls }}</p>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-gray-400 text-sm">Queue Size</h3>
+            <p class="text-2xl font-bold text-orange-400">{{ stats.queue_size }}</p>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-gray-400 text-sm">Errors</h3>
+            <p class="text-2xl font-bold text-red-400">{{ stats.error_count }}</p>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-gray-400 text-sm">Broken Links</h3>
+            <p class="text-2xl font-bold text-red-400">{{ stats.broken_links }}</p>
+        </div>
+    </div>
+
+    <!-- Source Stats -->
+    {% if stats.source_stats %}
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <h2 class="text-xl font-bold mb-4">Source Statistics</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-gray-700">
+                        <th class="py-2 px-4">Source</th>
+                        <th class="py-2 px-4">Type</th>
+                        <th class="py-2 px-4">Found</th>
+                        <th class="py-2 px-4">Errors</th>
+                        <th class="py-2 px-4">Last Run</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for source in stats.source_stats %}
+                    <tr class="border-b border-gray-700">
+                        <td class="py-2 px-4">{{ source.name }}</td>
+                        <td class="py-2 px-4">{{ source.source_type }}</td>
+                        <td class="py-2 px-4 text-green-400">{{ source.total_found }}</td>
+                        <td class="py-2 px-4 text-red-400">{{ source.total_errors }}</td>
+                        <td class="py-2 px-4">{{ source.last_run_at or 'Never' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: tgindex-api
+    runtime: python
+    buildCommand: pip install -e .
+    startCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: TELEGRAM_API_ID
+        sync: false
+      - key: TELEGRAM_API_HASH
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    plan: free
+
+  - type: worker
+    name: tgindex-worker
+    runtime: python
+    buildCommand: pip install -e .
+    startCommand: python -m app.cli.commands worker
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: TELEGRAM_API_ID
+        sync: false
+      - key: TELEGRAM_API_HASH
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    plan: free

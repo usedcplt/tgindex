@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}System - TGIndex{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <h1 class="text-3xl font-bold">System Status</h1>
+
+    <!-- Queue Stats -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <h2 class="text-xl font-bold mb-4">Queue Statistics</h2>
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <div class="text-center">
+                <p class="text-3xl font-bold text-yellow-400">{{ queue_stats.pending }}</p>
+                <p class="text-gray-400 text-sm">Pending</p>
+            </div>
+            <div class="text-center">
+                <p class="text-3xl font-bold text-blue-400">{{ queue_stats.processing }}</p>
+                <p class="text-gray-400 text-sm">Processing</p>
+            </div>
+            <div class="text-center">
+                <p class="text-3xl font-bold text-green-400">{{ queue_stats.validated }}</p>
+                <p class="text-gray-400 text-sm">Validated</p>
+            </div>
+            <div class="text-center">
+                <p class="text-3xl font-bold text-purple-400">{{ queue_stats.indexed }}</p>
+                <p class="text-gray-400 text-sm">Indexed</p>
+            </div>
+            <div class="text-center">
+                <p class="text-3xl font-bold text-red-400">{{ queue_stats.invalid }}</p>
+                <p class="text-gray-400 text-sm">Invalid</p>
+            </div>
+            <div class="text-center">
+                <p class="text-3xl font-bold text-red-400">{{ queue_stats.error }}</p>
+                <p class="text-gray-400 text-sm">Error</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Info -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <h2 class="text-xl font-bold mb-4">System Information</h2>
+        <div class="space-y-2">
+            <p class="text-gray-400">
+                <span class="font-medium text-white">API Version:</span> 0.1.0
+            </p>
+            <p class="text-gray-400">
+                <span class="font-medium text-white">Status:</span>
+                <span class="text-green-400">Running</span>
+            </p>
+            <p class="text-gray-400">
+                <span class="font-medium text-white">Total Queue Items:</span> {{ queue_stats.total }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <h2 class="text-xl font-bold mb-4">Activity Log</h2>
+        <div id="activity-log"
+             hx-get="/api/v1/system/activity"
+             hx-trigger="every 3s"
+             hx-swap="innerHTML"
+             class="space-y-2 max-h-96 overflow-y-auto">
+            <p class="text-gray-500">Loading...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Format activity log entry
+    function formatActivity(entry) {
+        const time = new Date(entry.time).toLocaleTimeString();
+        const statusColors = {
+            'running': 'text-yellow-400',
+            'completed': 'text-green-400',
+            'failed': 'text-red-400',
+            'started': 'text-blue-400',
+            'manual': 'text-gray-400'
+        };
+        const color = statusColors[entry.status] || 'text-gray-400';
+
+        let details = '';
+        if (entry.details && Object.keys(entry.details).length > 0) {
+            details = `<span class="text-gray-500 ml-2">${JSON.stringify(entry.details)}</span>`;
+        }
+
+        return `
+            <div class="flex items-center text-sm border-b border-gray-700 pb-2">
+                <span class="text-gray-500 w-20">${time}</span>
+                <span class="font-medium w-24">${entry.job}</span>
+                <span class="${color} w-20">${entry.status}</span>
+                <span class="text-gray-400 flex-1 truncate">${details}</span>
+            </div>
+        `;
+    }
+
+    // Override HTMX response handling
+    document.addEventListener('htmx:configRequest', function(event) {
+        // Allow JSON responses
+    });
+
+    document.addEventListener('htmx:beforeSwap', function(event) {
+        if (event.detail.xhr.response) {
+            try {
+                const data = JSON.parse(event.detail.xhr.response);
+                if (Array.isArray(data)) {
+                    event.detail.serverResponse = data.map(formatActivity).join('');
+                }
+            } catch(e) {}
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Chats - TGIndex{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold">Chats ({{ total }})</h1>
+        <div class="flex space-x-2">
+            <input
+                type="text"
+                id="search"
+                placeholder="Search chats..."
+                class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                hx-get="/api/v1/search"
+                hx-trigger="keyup changed delay:300ms"
+                hx-target="#chat-list"
+            >
+        </div>
+    </div>
+
+    <div id="chat-list" class="bg-gray-800 rounded-lg border border-gray-700">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="border-b border-gray-700">
+                    <th class="py-3 px-4">Title</th>
+                    <th class="py-3 px-4">Username</th>
+                    <th class="py-3 px-4">Type</th>
+                    <th class="py-3 px-4">Members</th>
+                    <th class="py-3 px-4">Language</th>
+                    <th class="py-3 px-4">Discovered</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for chat in chats %}
+                <tr class="border-b border-gray-700 hover:bg-gray-750">
+                    <td class="py-3 px-4">
+                        <a href="/dashboard/chats/{{ chat.telegram_id }}" class="text-blue-400 hover:underline">
+                            {{ chat.title }}
+                        </a>
+                    </td>
+                    <td class="py-3 px-4">
+                        {% if chat.username %}
+                        <a href="https://t.me/{{ chat.username }}" target="_blank" class="text-blue-400 hover:underline">
+                            @{{ chat.username }}
+                        </a>
+                        {% else %}
+                        <span class="text-gray-500">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="px-2 py-1 text-xs rounded-full
+                            {% if chat.chat_type == 'channel' %}bg-blue-900 text-blue-300
+                            {% elif chat.chat_type == 'supergroup' %}bg-purple-900 text-purple-300
+                            {% else %}bg-green-900 text-green-300{% endif %}">
+                            {{ chat.chat_type }}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4">{{ chat.member_count }}</td>
+                    <td class="py-3 px-4">{{ chat.language or '-' }}</td>
+                    <td class="py-3 px-4">{{ chat.discovered_at.strftime('%Y-%m-%d') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pages > 1 %}
+    <div class="flex justify-center space-x-2">
+        {% if page > 1 %}
+        <a href="?page={{ page - 1 }}" class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">Previous</a>
+        {% endif %}
+
+        <span class="px-4 py-2">Page {{ page }} of {{ pages }}</span>
+
+        {% if page < pages %}
+        <a href="?page={{ page + 1 }}" class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
