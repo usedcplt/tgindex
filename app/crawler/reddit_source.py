@@ -24,6 +24,10 @@ class RedditSource(BaseSource):
         "telegramchat",
         "RussianTelegram",
         "TelegramPromote",
+        "TelegramChannelsList",
+        "telegramchannels",
+        "TelegramStars",
+        "TelegramGroupsLinks",
     ]
 
     def __init__(
@@ -34,7 +38,7 @@ class RedditSource(BaseSource):
         super().__init__(name, config)
         cfg = config or {}
         self.subreddits = cfg.get("subreddits", self.SUBREDDITS)
-        self.max_posts = cfg.get("max_posts", 50)
+        self.max_posts = cfg.get("max_posts", 100)
 
     async def discover(self) -> list[str]:
         """Discover URLs from Reddit."""
@@ -48,17 +52,19 @@ class RedditSource(BaseSource):
                 try:
                     urls = await self._scrape_subreddit(client, subreddit)
                     all_urls.extend(urls)
-                    logger.info("reddit_scraped", subreddit=subreddit, found=len(urls))
+                    logger.debug("reddit_scraped", subreddit=subreddit, found=len(urls))
                 except Exception as e:
-                    logger.error("reddit_failed", subreddit=subreddit, error=str(e))
+                    logger.debug("reddit_failed", subreddit=subreddit, error=str(e))
 
-        return list(set(all_urls))
+        unique_urls = list(set(all_urls))
+        logger.info("reddit_completed", subreddits=len(self.subreddits), found=len(unique_urls))
+        return unique_urls
 
     async def _scrape_subreddit(self, client: httpx.AsyncClient, subreddit: str) -> list[str]:
         """Scrape a subreddit for Telegram links."""
         urls = []
 
-        # Use old.reddit.com for easier scraping
+        # Search for telegram links
         url = f"https://old.reddit.com/r/{subreddit}/search.json"
         params = {
             "q": "t.me OR telegram",

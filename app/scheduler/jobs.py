@@ -13,6 +13,7 @@ from app.crawler.catalog_source import CatalogSource
 from app.crawler.github_source import GitHubSource
 from app.crawler.reddit_source import RedditSource
 from app.crawler.recursive_source import RecursiveSource
+from app.crawler.telegram_search_source import TelegramSearchSource
 from app.workers.discovery_worker import DiscoveryWorker
 from app.workers.metadata_worker import MetadataWorker
 from app.workers.update_worker import UpdateWorker
@@ -122,6 +123,7 @@ class SchedulerJobs:
         try:
             async with session_factory() as session:
                 sources = [
+                    TelegramSearchSource("telegram_search"),
                     SearchEngineSource("search_engine"),
                     CatalogSource("catalog"),
                     GitHubSource("github"),

@@ -18,10 +18,16 @@ class GitHubSource(BaseSource):
     """Discovers Telegram links from GitHub repositories."""
 
     SEARCH_QUERIES = [
-        "telegram channel",
-        "telegram group",
+        "telegram channel list",
+        "telegram group list",
         "t.me",
         "telegram chat",
+        "telegram channels",
+        "telegram groups",
+        "best telegram channels",
+        "cool telegram groups",
+        "telegram resources",
+        "awesome telegram",
     ]
 
     def __init__(
@@ -66,7 +72,9 @@ class GitHubSource(BaseSource):
                 except Exception as e:
                     logger.error("github_search_failed", query=query, error=str(e))
 
-        return list(set(all_urls))
+        unique_urls = list(set(all_urls))
+        logger.info("github_completed", queries=len(self.queries), found=len(unique_urls))
+        return unique_urls
 
     async def _search_code(self, client: httpx.AsyncClient, query: str) -> list[str]:
         """Search GitHub code for Telegram links."""
