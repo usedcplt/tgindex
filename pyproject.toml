@@ -7,7 +7,6 @@ name = "tgindex"
 version = "0.1.0"
 description = "Fully automated Telegram chat/channel indexing system"
 readme = "README.md"
-license = {text = "MIT"}
 requires-python = ">=3.11"
 dependencies = [
     "telethon>=1.36.0",
@@ -30,6 +29,9 @@ dependencies = [
     "ddgs>=9.0.0",
     "fake-useragent>=2.0.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
 
 [project.optional-dependencies]
 dev = [
