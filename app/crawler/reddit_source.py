@@ -23,6 +23,7 @@ class RedditSource(BaseSource):
         "TelegramChannels",
         "telegramchat",
         "RussianTelegram",
+        "TelegramPromote",
     ]
 
     def __init__(

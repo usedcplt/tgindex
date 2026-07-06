@@ -23,6 +23,7 @@ class CatalogSource(BaseSource):
     """Discovers Telegram links from Telegram catalogs and directories."""
 
     CATALOG_URLS = [
+        # Telegram official catalogs (содержат реальные ссылки на каналы)
         "https://t.me/s/channels",
         "https://t.me/s/chat",
         "https://t.me/s/groups",
@@ -31,28 +32,6 @@ class CatalogSource(BaseSource):
         "https://t.me/s/russian_telegram",
         "https://t.me/s/telegram_channels",
         "https://t.me/s/topchannels",
-        "https://t.me/s/IT",
-        "https://t.me/s/crypto",
-        "https://t.me/s/news",
-        "https://t.me/s/programming",
-        "https://t.me/s/design",
-        "https://t.me/s/music",
-        "https://t.me/s/movies",
-        "https://t.me/s/games",
-        "https://t.me/s/sports",
-        "https://t.me/s/education",
-        "https://t.me/s/tech",
-        "https://t.me/s/business",
-        "https://t.me/s/science",
-        "https://t.me/s/art",
-        "https://t.me/s/photography",
-        "https://t.me/s/travel",
-        "https://t.me/s/food",
-        "https://t.me/s/health",
-        "https://t.me/s/fitness",
-        "https://t.me/s/fashion",
-        "https://t.me/s/cars",
-        "https://t.me/s/reddit",
     ]
 
     def __init__(
