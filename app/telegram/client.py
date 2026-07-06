@@ -112,6 +112,23 @@ class TelegramClient:
             logger.error("check_username_failed", username=username, error=str(e))
             return None
 
+    async def search_entities(self, query: str, limit: int = 20) -> list:
+        """Search for entities by query."""
+        try:
+            await self.connect()
+
+            if not self._authorized:
+                return []
+
+            result = await self.client.search_entities(query, limit=limit)
+            return result
+
+        except FloodWaitError:
+            raise
+        except Exception as e:
+            logger.debug("search_entities_failed", query=query, error=str(e))
+            return []
+
     def _get_chat_type(self, entity) -> str:
         """Determine chat type from entity."""
         if hasattr(entity, "megagroup") and entity.megagroup:

@@ -9,7 +9,6 @@ import structlog
 from app.config import settings
 from app.database.engine import session_factory
 from app.crawler.search_engine import SearchEngineSource
-from app.crawler.catalog_source import CatalogSource
 from app.crawler.github_source import GitHubSource
 from app.crawler.reddit_source import RedditSource
 from app.crawler.recursive_source import RecursiveSource
@@ -125,7 +124,6 @@ class SchedulerJobs:
                 sources = [
                     TelegramSearchSource("telegram_search"),
                     SearchEngineSource("search_engine"),
-                    CatalogSource("catalog"),
                     GitHubSource("github"),
                     RedditSource("reddit"),
                     RecursiveSource(session, "recursive"),
