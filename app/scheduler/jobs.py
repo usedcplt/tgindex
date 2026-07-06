@@ -9,6 +9,7 @@ import structlog
 from app.config import settings
 from app.database.engine import session_factory
 from app.crawler.search_engine import SearchEngineSource
+from app.crawler.catalog_source import CatalogSource
 from app.crawler.github_source import GitHubSource
 from app.crawler.reddit_source import RedditSource
 from app.crawler.recursive_source import RecursiveSource
@@ -48,62 +49,61 @@ class SchedulerJobs:
 
     def setup_jobs(self) -> None:
         """Setup all scheduled jobs."""
-        # Discovery every 10 seconds
+        # Discovery every 30 seconds (reduced from 10)
         self.scheduler.add_job(
             self._run_discovery,
             "interval",
-            seconds=10,
+            seconds=30,
             id="discovery_job",
             name="Discovery",
         )
 
-        # Validation every 10 seconds
+        # Validation every 30 seconds
         self.scheduler.add_job(
             self._run_validation,
             "interval",
-            seconds=10,
+            seconds=30,
             id="validation_job",
             name="Validation",
         )
 
-        # Metadata extraction every 10 seconds
+        # Metadata extraction every 30 seconds
         self.scheduler.add_job(
             self._run_metadata_extraction,
             "interval",
-            seconds=10,
+            seconds=30,
             id="metadata_job",
             name="Metadata",
         )
 
-        # Retry errors every 5 minutes
+        # Retry errors every 10 minutes
         self.scheduler.add_job(
             self._run_retry_errors,
             "interval",
-            minutes=5,
+            minutes=10,
             id="retry_job",
             name="RetryErrors",
         )
 
-        # Cleanup stuck processing every minute
+        # Cleanup stuck every 5 minutes
         self.scheduler.add_job(
             self._run_cleanup_stuck,
             "interval",
-            minutes=1,
+            minutes=5,
             id="cleanup_job",
             name="CleanupStuck",
         )
 
-        # Update every 2 hours
+        # Update every 4 hours
         self.scheduler.add_job(
             self._run_update,
             "interval",
-            hours=2,
+            hours=4,
             id="update_job",
             name="Update",
         )
 
         logger.info("scheduler_jobs_setup")
-        log_activity("scheduler", "started", {"jobs": ["discovery", "validation", "metadata", "retry", "cleanup", "update"]})
 
     def start(self) -> None:
         """Start the scheduler."""
@@ -124,6 +124,7 @@ class SchedulerJobs:
                 sources = [
                     TelegramSearchSource("telegram_search"),
                     SearchEngineSource("search_engine"),
+                    CatalogSource("catalog"),
                     GitHubSource("github"),
                     RedditSource("reddit"),
                     RecursiveSource(session, "recursive"),
