@@ -1,6 +1,7 @@
 """TGIndex main application entry point."""
 
 import os
+from pathlib import Path
 import structlog
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
@@ -14,6 +15,10 @@ from app.database.engine import engine
 from app.scheduler.jobs import SchedulerJobs
 
 logger = structlog.get_logger()
+
+# Absolute paths for templates and static files
+BASE_DIR = Path(__file__).parent
+STATIC_DIR = BASE_DIR / "dashboard" / "static"
 
 scheduler_jobs = SchedulerJobs()
 
@@ -42,8 +47,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="app/dashboard/static"), name="static")
+# Mount static files with absolute path
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Include routers
 app.include_router(api_router)

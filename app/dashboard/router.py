@@ -1,5 +1,7 @@
 """Dashboard router."""
 
+from pathlib import Path
+
 from fastapi import APIRouter, Request, Depends
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +13,10 @@ from app.repositories.stats_repository import StatsRepository
 from app.repositories.queue_repository import QueueRepository
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
-templates = Jinja2Templates(directory="app/dashboard/templates")
+
+# Absolute path for templates
+TEMPLATES_DIR = Path(__file__).parent / "templates"
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 @router.get("/")
