@@ -29,8 +29,9 @@ async def dashboard_index(
     stats = await stats_repo.get_statistics()
 
     return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "stats": stats},
+        request=request,
+        name="index.html",
+        context={"stats": stats},
     )
 
 
@@ -50,9 +51,9 @@ async def dashboard_chats(
     pages = (total + size - 1) // size if total > 0 else 0
 
     return templates.TemplateResponse(
-        "chats.html",
-        {
-            "request": request,
+        request=request,
+        name="chats.html",
+        context={
             "chats": chats,
             "total": total,
             "page": page,
@@ -71,8 +72,9 @@ async def dashboard_sources(
     sources = await source_repo.get_all()
 
     return templates.TemplateResponse(
-        "sources.html",
-        {"request": request, "sources": sources},
+        request=request,
+        name="sources.html",
+        context={"sources": sources},
     )
 
 
@@ -87,8 +89,9 @@ async def dashboard_statistics(
     history = await stats_repo.get_historical_statistics(30)
 
     return templates.TemplateResponse(
-        "statistics.html",
-        {"request": request, "stats": stats, "history": history},
+        request=request,
+        name="statistics.html",
+        context={"stats": stats, "history": history},
     )
 
 
@@ -102,6 +105,7 @@ async def dashboard_system(
     queue_stats = await queue_repo.get_queue_stats()
 
     return templates.TemplateResponse(
-        "system.html",
-        {"request": request, "queue_stats": queue_stats},
+        request=request,
+        name="system.html",
+        context={"queue_stats": queue_stats},
     )
