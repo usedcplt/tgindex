@@ -126,17 +126,56 @@ class QueueRepository(BaseRepository[UrlQueue]):
             .values(
                 status="error",
                 error_message=error_message,
+                attempts=UrlQueue.attempts + 1,
                 updated_at=datetime.utcnow(),
             )
         )
 
-    async def increment_attempts(self, ids: list[int]) -> None:
-        """Increment attempt counter."""
-        await self.session.execute(
-            update(UrlQueue)
-            .where(UrlQueue.id.in_(ids))
-            .values(attempts=UrlQueue.attempts + 1, updated_at=datetime.utcnow())
+    async def retry_errors(self, max_retries: int = 3, batch_size: int = 100) -> int:
+        """Retry error URLs that haven't exceeded max retries."""
+        result = await self.session.execute(
+            select(UrlQueue.id)
+            .where(UrlQueue.status == "error")
+            .where(UrlQueue.attempts < max_retries)
+            .limit(batch_size)
         )
+        ids = [row[0] for row in result.all()]
+
+        if ids:
+            await self.session.execute(
+                update(UrlQueue)
+                .where(UrlQueue.id.in_(ids))
+                .values(
+                    status="pending",
+                    error_message=None,
+                    updated_at=datetime.utcnow(),
+                )
+            )
+
+        return len(ids)
+
+    async def reset_stuck_processing(self, timeout_minutes: int = 10) -> int:
+        """Reset URLs stuck in 'processing' status."""
+        cutoff = datetime.utcnow() - __import__("datetime").timedelta(minutes=timeout_minutes)
+        result = await self.session.execute(
+            select(UrlQueue.id)
+            .where(UrlQueue.status == "processing")
+            .where(UrlQueue.updated_at < cutoff)
+            .limit(100)
+        )
+        ids = [row[0] for row in result.all()]
+
+        if ids:
+            await self.session.execute(
+                update(UrlQueue)
+                .where(UrlQueue.id.in_(ids))
+                .values(
+                    status="pending",
+                    updated_at=datetime.utcnow(),
+                )
+            )
+
+        return len(ids)
 
     async def get_queue_stats(self) -> dict:
         """Get queue statistics."""
@@ -160,22 +199,15 @@ class QueueRepository(BaseRepository[UrlQueue]):
 
     async def cleanup_old_entries(self, days: int = 30) -> int:
         """Clean up old processed entries."""
-        cutoff = datetime.utcnow() - __import__("datetime").timedelta(days=days)
-        result = await self.session.execute(
-            select(func.count()).where(
-                UrlQueue.status.in_(["indexed", "invalid"]),
-                UrlQueue.processed_at < cutoff,
-            )
-        )
-        count = result.scalar_one()
+        from datetime import timedelta
+        cutoff = datetime.utcnow() - timedelta(days=days)
 
         from sqlalchemy import delete
-
-        await self.session.execute(
+        result = await self.session.execute(
             delete(UrlQueue).where(
                 UrlQueue.status.in_(["indexed", "invalid"]),
                 UrlQueue.processed_at < cutoff,
             )
         )
 
-        return count
+        return result.rowcount

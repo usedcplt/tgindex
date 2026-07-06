@@ -31,8 +31,6 @@ class CatalogSource(BaseSource):
         "https://t.me/s/russian_telegram",
         "https://t.me/s/telegram_channels",
         "https://t.me/s/topchannels",
-        "https://t.me/s/best channels",
-        "https://t.me/s/telegram channels",
         "https://t.me/s/IT",
         "https://t.me/s/crypto",
         "https://t.me/s/news",
@@ -43,6 +41,18 @@ class CatalogSource(BaseSource):
         "https://t.me/s/games",
         "https://t.me/s/sports",
         "https://t.me/s/education",
+        "https://t.me/s/tech",
+        "https://t.me/s/business",
+        "https://t.me/s/science",
+        "https://t.me/s/art",
+        "https://t.me/s/photography",
+        "https://t.me/s/travel",
+        "https://t.me/s/food",
+        "https://t.me/s/health",
+        "https://t.me/s/fitness",
+        "https://t.me/s/fashion",
+        "https://t.me/s/cars",
+        "https://t.me/s/reddit",
     ]
 
     def __init__(

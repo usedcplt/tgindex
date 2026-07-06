@@ -19,7 +19,18 @@ logger = structlog.get_logger()
 class TelegramClient:
     """Wrapper for Telethon client supporting both file and string sessions."""
 
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
     def __init__(self) -> None:
+        if self._initialized:
+            return
+        self._initialized = True
         self.client: TelethonClient | None = None
         self._authorized = False
 
@@ -29,7 +40,6 @@ class TelegramClient:
             session_string = settings.telegram.session_string
 
             if session_string:
-                # Use string session (for Render/cloud deployment)
                 self.client = TelethonClient(
                     StringSession(session_string),
                     settings.telegram.api_id,
@@ -37,7 +47,6 @@ class TelegramClient:
                 )
                 logger.info("telegram_session_type", type="string")
             else:
-                # Use file session (for local development)
                 self.client = TelethonClient(
                     settings.telegram.session_name,
                     settings.telegram.api_id,
@@ -49,7 +58,6 @@ class TelegramClient:
             await self.client.connect()
             logger.info("telegram_connected")
 
-        # Check if authorized
         if not self._authorized:
             if await self.client.is_user_authorized():
                 self._authorized = True
@@ -93,8 +101,9 @@ class TelegramClient:
             logger.debug("channel_private", username=username)
             return None
         except FloodWaitError as e:
+            # Don't raise - handle in validator with retry
             logger.warning("flood_wait", username=username, seconds=e.seconds)
-            raise
+            return None
         except AuthKeyUnregisteredError:
             logger.error("auth_key_unregistered")
             self._authorized = False

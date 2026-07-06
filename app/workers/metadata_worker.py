@@ -55,7 +55,7 @@ class MetadataWorker:
             )
 
             if not validated:
-                logger.info("no_validated_urls")
+                logger.debug("no_validated_urls")
                 return {"processed": 0}
 
             urls = [item.url for item in validated]
@@ -85,7 +85,7 @@ class MetadataWorker:
                 await self.queue_repo.mark_error(error_ids, "Metadata extraction failed")
 
             logger.info(
-                "metadata_worker_completed",
+                "metadata_completed",
                 total=len(validated),
                 indexed=len(indexed_ids),
                 errors=len(error_ids),
@@ -98,5 +98,5 @@ class MetadataWorker:
             }
 
         except Exception as e:
-            logger.error("metadata_worker_failed", error=str(e))
+            logger.error("metadata_failed", error=str(e))
             raise

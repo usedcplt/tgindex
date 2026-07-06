@@ -8,28 +8,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.repositories.queue_repository import QueueRepository
 from app.services.validator import Validator
-from app.telegram.client import TelegramClient
-from app.telegram.rate_limiter import RateLimiter
 
 logger = structlog.get_logger()
 
-# Shared instances to avoid creating new connections
-_telegram_client: TelegramClient | None = None
-_rate_limiter: RateLimiter | None = None
+# Shared validator instance
+_validator: Validator | None = None
 
 
-def _get_telegram_client() -> TelegramClient:
-    global _telegram_client
-    if _telegram_client is None:
-        _telegram_client = TelegramClient()
-    return _telegram_client
-
-
-def _get_rate_limiter() -> RateLimiter:
-    global _rate_limiter
-    if _rate_limiter is None:
-        _rate_limiter = RateLimiter()
-    return _rate_limiter
+def _get_validator(session: AsyncSession) -> Validator:
+    global _validator
+    if _validator is None:
+        _validator = Validator(session)
+    return _validator
 
 
 class ValidationWorker:
@@ -38,9 +28,7 @@ class ValidationWorker:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.queue_repo = QueueRepository(session)
-        self.telegram_client = _get_telegram_client()
-        self.rate_limiter = _get_rate_limiter()
-        self.validator = Validator(session, self.telegram_client, self.rate_limiter)
+        self.validator = _get_validator(session)
 
     async def run(self) -> dict:
         """Run validation on pending URLs."""
@@ -52,7 +40,7 @@ class ValidationWorker:
             )
 
             if not pending:
-                logger.info("no_pending_urls")
+                logger.debug("no_pending_urls")
                 return {"processed": 0}
 
             urls = [item.url for item in pending]
@@ -60,9 +48,8 @@ class ValidationWorker:
 
             await self.queue_repo.mark_processing(ids)
 
-            # Process URLs in parallel (limited by rate limiter)
-            tasks = [self.validator.validate_url(url) for url in urls]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            # Process URLs in parallel
+            results = await self.validator.validate_batch(urls)
 
             validated_ids = []
             invalid_ids = []
@@ -81,7 +68,7 @@ class ValidationWorker:
                 await self.queue_repo.mark_invalid(invalid_ids)
 
             logger.info(
-                "validation_worker_completed",
+                "validation_completed",
                 total=len(pending),
                 valid=len(validated_ids),
                 invalid=len(invalid_ids),
@@ -94,5 +81,5 @@ class ValidationWorker:
             }
 
         except Exception as e:
-            logger.error("validation_worker_failed", error=str(e))
+            logger.error("validation_failed", error=str(e))
             raise

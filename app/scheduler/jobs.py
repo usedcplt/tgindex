@@ -57,22 +57,40 @@ class SchedulerJobs:
             name="Discovery",
         )
 
-        # Validation every 15 seconds
+        # Validation every 10 seconds
         self.scheduler.add_job(
             self._run_validation,
             "interval",
-            seconds=15,
+            seconds=10,
             id="validation_job",
             name="Validation",
         )
 
-        # Metadata extraction every 15 seconds
+        # Metadata extraction every 10 seconds
         self.scheduler.add_job(
             self._run_metadata_extraction,
             "interval",
-            seconds=15,
+            seconds=10,
             id="metadata_job",
             name="Metadata",
+        )
+
+        # Retry errors every 5 minutes
+        self.scheduler.add_job(
+            self._run_retry_errors,
+            "interval",
+            minutes=5,
+            id="retry_job",
+            name="RetryErrors",
+        )
+
+        # Cleanup stuck processing every minute
+        self.scheduler.add_job(
+            self._run_cleanup_stuck,
+            "interval",
+            minutes=1,
+            id="cleanup_job",
+            name="CleanupStuck",
         )
 
         # Update every 2 hours
@@ -85,7 +103,7 @@ class SchedulerJobs:
         )
 
         logger.info("scheduler_jobs_setup")
-        log_activity("scheduler", "started", {"jobs": ["discovery", "validation", "metadata", "update"]})
+        log_activity("scheduler", "started", {"jobs": ["discovery", "validation", "metadata", "retry", "cleanup", "update"]})
 
     def start(self) -> None:
         """Start the scheduler."""
@@ -143,6 +161,30 @@ class SchedulerJobs:
         except Exception as e:
             log_activity("metadata", "failed", {"error": str(e)})
             logger.error("metadata_failed", error=str(e))
+
+    async def _run_retry_errors(self) -> None:
+        """Retry error URLs."""
+        try:
+            from app.repositories.queue_repository import QueueRepository
+            async with session_factory() as session:
+                queue_repo = QueueRepository(session)
+                retried = await queue_repo.retry_errors(max_retries=3)
+                if retried > 0:
+                    logger.info("retry_errors", retried=retried)
+        except Exception as e:
+            logger.error("retry_failed", error=str(e))
+
+    async def _run_cleanup_stuck(self) -> None:
+        """Clean up stuck processing URLs."""
+        try:
+            from app.repositories.queue_repository import QueueRepository
+            async with session_factory() as session:
+                queue_repo = QueueRepository(session)
+                reset = await queue_repo.reset_stuck_processing(timeout_minutes=10)
+                if reset > 0:
+                    logger.info("cleanup_stuck", reset=reset)
+        except Exception as e:
+            logger.error("cleanup_failed", error=str(e))
 
     async def _run_update(self) -> None:
         """Run update job."""
