@@ -16,6 +16,7 @@ class TelegramSettings(BaseSettings):
     api_id: int = Field(..., description="Telegram API ID")
     api_hash: str = Field(..., description="Telegram API hash")
     session_name: str = Field("tgindex_session", description="Telethon session file name")
+    session_string: str | None = Field(None, description="Telethon session string for cloud deployment")
 
     model_config = SettingsConfigDict(env_prefix="TELEGRAM_", env_file=str(ENV_FILE), extra="ignore")
 

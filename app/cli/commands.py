@@ -1,6 +1,7 @@
 """CLI commands."""
 
 import asyncio
+import os
 import sys
 
 import structlog
@@ -14,10 +15,12 @@ def run_server():
     """Run the API server."""
     import uvicorn
 
+    port = int(os.getenv("PORT", settings.api.port))
+
     uvicorn.run(
         "app.main:app",
         host=settings.api.host,
-        port=settings.api.port,
+        port=port,
         workers=settings.api.workers,
         reload=settings.debug,
     )

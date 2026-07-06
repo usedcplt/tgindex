@@ -3,7 +3,8 @@
 import time
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import PlainTextResponse, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +19,7 @@ router = APIRouter(prefix="/system", tags=["system"])
 # In-memory activity log
 _activity_log: list[dict] = []
 _max_log_size = 100
+_start_time = time.time()
 
 
 def add_activity(job: str, status: str, details: dict | None = None) -> None:
@@ -33,22 +35,18 @@ def add_activity(job: str, status: str, details: dict | None = None) -> None:
         _activity_log.pop(0)
 
 
-@router.get("/health")
-async def health_check(
-    session: AsyncSession = Depends(get_session),
-) -> dict:
-    """Health check endpoint."""
-    try:
-        await session.execute(text("SELECT 1"))
-        db_status = "healthy"
-    except Exception as e:
-        db_status = f"unhealthy: {str(e)}"
+@router.api_route("/health", methods=["GET", "HEAD"])
+async def health_check(request: Request) -> Response:
+    """Health check endpoint for UptimeRobot and Render."""
+    if request.method == "HEAD":
+        return Response(status_code=200)
+    return PlainTextResponse("OK")
 
-    return {
-        "status": "healthy",
-        "version": settings.app_version,
-        "database": db_status,
-    }
+
+@router.get("/ping")
+async def ping() -> dict:
+    """Simple ping endpoint for keep-alive."""
+    return {"ping": "pong", "timestamp": datetime.utcnow().isoformat()}
 
 
 @router.get("/metrics")
@@ -64,7 +62,12 @@ async def get_metrics(
     total_chats = await chat_repo.count()
     sources = await source_repo.get_all()
 
+    uptime_seconds = int(time.time() - _start_time)
+
     return {
+        "status": "running",
+        "uptime_seconds": uptime_seconds,
+        "version": settings.app_version,
         "total_chats": total_chats,
         "queue_pending": queue_stats.get("pending", 0),
         "queue_processing": queue_stats.get("processing", 0),
@@ -80,10 +83,3 @@ async def get_metrics(
 async def get_activity(limit: int = 50) -> list[dict]:
     """Get recent activity log."""
     return list(reversed(_activity_log[-limit:]))
-
-
-@router.get("/activity/log")
-async def add_manual_activity(job: str = "manual", details: str = "") -> dict:
-    """Add manual activity entry."""
-    add_activity(job, "manual", {"details": details})
-    return {"status": "ok"}

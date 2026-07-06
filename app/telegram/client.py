@@ -2,6 +2,7 @@
 
 import structlog
 from telethon import TelegramClient as TelethonClient
+from telethon.sessions import StringSession
 from telethon.errors import (
     FloodWaitError,
     UsernameNotOccupiedError,
@@ -16,7 +17,7 @@ logger = structlog.get_logger()
 
 
 class TelegramClient:
-    """Wrapper for Telethon client."""
+    """Wrapper for Telethon client supporting both file and string sessions."""
 
     def __init__(self) -> None:
         self.client: TelethonClient | None = None
@@ -25,11 +26,24 @@ class TelegramClient:
     async def connect(self) -> None:
         """Connect to Telegram."""
         if self.client is None:
-            self.client = TelethonClient(
-                settings.telegram.session_name,
-                settings.telegram.api_id,
-                settings.telegram.api_hash,
-            )
+            session_string = settings.telegram.session_string
+
+            if session_string:
+                # Use string session (for Render/cloud deployment)
+                self.client = TelethonClient(
+                    StringSession(session_string),
+                    settings.telegram.api_id,
+                    settings.telegram.api_hash,
+                )
+                logger.info("telegram_session_type", type="string")
+            else:
+                # Use file session (for local development)
+                self.client = TelethonClient(
+                    settings.telegram.session_name,
+                    settings.telegram.api_id,
+                    settings.telegram.api_hash,
+                )
+                logger.info("telegram_session_type", type="file")
 
         if not self.client.is_connected():
             await self.client.connect()
