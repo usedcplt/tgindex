@@ -2,6 +2,7 @@
 
 import base64
 import os
+import asyncio
 
 import httpx
 import structlog
@@ -31,8 +32,9 @@ class GitHubSource(BaseSource):
         super().__init__(name, config)
         cfg = config or {}
         self.queries = cfg.get("queries", self.SEARCH_QUERIES)
-        self.max_results = cfg.get("max_results", 50)
+        self.max_results = cfg.get("max_results", 30)
         self.token = os.getenv("GITHUB_TOKEN")
+        self._rate_limited_until = 0
 
     def _get_headers(self) -> dict:
         """Get headers with optional auth."""
@@ -43,6 +45,11 @@ class GitHubSource(BaseSource):
 
     async def discover(self) -> list[str]:
         """Discover URLs from GitHub."""
+        # Check if rate limited
+        if asyncio.get_event_loop().time() < self._rate_limited_until:
+            logger.debug("github_rate_limited_skip")
+            return []
+
         all_urls = []
 
         async with httpx.AsyncClient(
@@ -54,11 +61,8 @@ class GitHubSource(BaseSource):
                 try:
                     urls = await self._search_code(client, query)
                     all_urls.extend(urls)
-                    logger.info(
-                        "github_search_completed",
-                        query=query,
-                        found=len(urls),
-                    )
+                    # Small delay between queries
+                    await asyncio.sleep(2)
                 except Exception as e:
                     logger.error("github_search_failed", query=query, error=str(e))
 
@@ -74,30 +78,28 @@ class GitHubSource(BaseSource):
             "per_page": min(self.max_results, 100),
         }
 
-        try:
-            response = await client.get(search_url, params=params)
+        response = await client.get(search_url, params=params)
 
-            if response.status_code == 401:
-                logger.warning("github_auth_required", message="Set GITHUB_TOKEN for more results")
-                return urls
+        if response.status_code == 403:
+            # Rate limited - back off for 10 minutes
+            self._rate_limited_until = asyncio.get_event_loop().time() + 600
+            logger.warning("github_rate_limited", backoff_seconds=600)
+            return urls
 
-            if response.status_code == 403:
-                logger.warning("github_rate_limited", message="Rate limit exceeded")
-                return urls
+        if response.status_code == 401:
+            logger.warning("github_auth_required")
+            return urls
 
-            response.raise_for_status()
+        response.raise_for_status()
 
-            data = response.json()
-            items = data.get("items", [])
+        data = response.json()
+        items = data.get("items", [])
 
-            for item in items:
-                content_url = item.get("url")
-                if content_url:
-                    file_urls = await self._fetch_file_content(client, content_url)
-                    urls.extend(file_urls)
-
-        except httpx.HTTPError as e:
-            logger.error("github_api_error", error=str(e))
+        for item in items:
+            content_url = item.get("url")
+            if content_url:
+                file_urls = await self._fetch_file_content(client, content_url)
+                urls.extend(file_urls)
 
         return urls
 

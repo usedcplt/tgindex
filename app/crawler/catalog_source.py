@@ -16,8 +16,6 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.5",
-    "Accept-Encoding": "gzip, deflate",
-    "Connection": "keep-alive",
 }
 
 
@@ -33,6 +31,18 @@ class CatalogSource(BaseSource):
         "https://t.me/s/russian_telegram",
         "https://t.me/s/telegram_channels",
         "https://t.me/s/topchannels",
+        "https://t.me/s/best channels",
+        "https://t.me/s/telegram channels",
+        "https://t.me/s/IT",
+        "https://t.me/s/crypto",
+        "https://t.me/s/news",
+        "https://t.me/s/programming",
+        "https://t.me/s/design",
+        "https://t.me/s/music",
+        "https://t.me/s/movies",
+        "https://t.me/s/games",
+        "https://t.me/s/sports",
+        "https://t.me/s/education",
     ]
 
     def __init__(
@@ -53,21 +63,26 @@ class CatalogSource(BaseSource):
             follow_redirects=True,
             headers=HEADERS,
         ) as client:
-            # Scrape all catalogs in parallel
-            tasks = [
-                self._scrape_catalog_safe(client, url)
-                for url in self.catalog_urls
-            ]
+            # Scrape all catalogs in parallel (max 5 concurrent)
+            semaphore = asyncio.Semaphore(5)
+
+            async def scrape_with_limit(url):
+                async with semaphore:
+                    return await self._scrape_catalog_safe(client, url)
+
+            tasks = [scrape_with_limit(url) for url in self.catalog_urls]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             for result, url in zip(results, self.catalog_urls):
                 if isinstance(result, Exception):
-                    logger.error("catalog_scrape_failed", url=url, error=str(result))
-                else:
+                    logger.debug("catalog_failed", url=url, error=str(result))
+                elif result:
                     all_urls.extend(result)
-                    logger.info("catalog_scraped", url=url, found=len(result))
+                    logger.debug("catalog_scraped", url=url, found=len(result))
 
-        return list(set(all_urls))
+        unique_urls = list(set(all_urls))
+        logger.info("catalog_total", urls_found=len(unique_urls))
+        return unique_urls
 
     async def _scrape_catalog_safe(
         self, client: httpx.AsyncClient, url: str
@@ -76,7 +91,7 @@ class CatalogSource(BaseSource):
         try:
             return await self._scrape_catalog(client, url)
         except Exception as e:
-            logger.error("catalog_error", url=url, error=str(e))
+            logger.debug("catalog_error", url=url, error=str(e))
             return []
 
     async def _scrape_catalog(self, client: httpx.AsyncClient, url: str) -> list[str]:
